@@ -2,7 +2,7 @@
 
 Bank kata
 
-Test scenario:
+## Test scenario
 
 ```
 Given a client makes a deposit of 1000 on 10-01-2012
@@ -16,7 +16,7 @@ date || credit || debit || balance
 10/01/2012 || 1000.00 || || 1000.00
 ```
 
-Requirements:
+## Requirements
 
 - Deposit and Withdrawal
 - Transfer
@@ -32,6 +32,8 @@ Commands:
 - Withdraw
 - Transaction
 
+## Pseudo code
+```
 type AccountId = String
 type Money = BigDecimal
 type AccountStatement = Transaction + balance: Money 
@@ -45,3 +47,4 @@ statement: AccountId -> foldLeft [AccountStatement]
 type Terminal: List[AccountStatement] => String
 printing: Terminal -> AccountId -> List[AccountStatement]
 consolePrinting: AccountId -> List[AccountStatement] = printing(std out) _
+```
