@@ -34,7 +34,7 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     deposit(depositTransaction("User1", 1000)) shouldBe Left(AccountNotExist)
   }
 
-  it should "deposit the money for a transaction" in {
+  it should "create a new account and deposit the money for a transaction" in {
     val account = createAccount(NewAccount("John", "Doe"))
 
     deposit(depositTransaction(account.id, 1000)) shouldBe Right(())
