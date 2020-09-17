@@ -36,13 +36,13 @@ Commands:
 ```
 type AccountId = String
 type Money = BigDecimal
-type AccountStatement = Transaction + balance: Money 
-type Transaction = (account: AccountId + date: Date + amount: Money    
+type Transaction = (account: AccountId, date: Date, amount: Money)
+type AccountStatement = (transaction: Transaction, balance: Money)
 type Transfer = (fromAccount, transaction) -> (fromAccount, transaction) -> Unit
 
-deposit: Transaction -> Unit
-withdraw: Transaction -> Unit
-statement: AccountId -> foldLeft [AccountStatement]
+deposit: Bank -> Transaction -> Unit
+withdraw: Bank -> Transaction -> Unit
+statement: Bank -> AccountId -> foldLeft [AccountStatement]
 
 type Terminal: List[AccountStatement] => String
 printing: Terminal -> AccountId -> List[AccountStatement]
