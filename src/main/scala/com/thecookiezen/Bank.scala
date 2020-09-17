@@ -15,6 +15,8 @@ object Bank {
   type Deposit =
     Bank => FindAccount => Transaction => Either[AccountError, Unit]
 
+  def apply(): Bank = new Bank(Map.empty)
+
   // should fail if account already exists
   val createAccount: Bank => NewAccount => Account = bank =>
     newAccount => {
@@ -36,8 +38,6 @@ object Bank {
             .map(_ => ())
         }.toRight(AccountNotExist)
 
-  val withdraw: Bank => Transaction => Unit                   = _ => _ => ()
-  val accountStatement: Bank => AccountId => Option[AccountStatement] = _ => _ => Some(AccountStatement())
-
-  def apply(): Bank = new Bank(Map.empty)
+  val withdraw: Bank => Transaction => Unit                           = _ => _ => ()
+  val accountStatement: Bank => AccountId => Option[AccountStatement] = _ => _ => None
 }
