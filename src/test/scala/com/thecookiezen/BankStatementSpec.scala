@@ -25,13 +25,18 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     |""".stripMargin
 
   private val clock: Clock = () => LocalDate.now()
-  private val transaction: (AccountId, Money) => Transaction =
-    Transaction.newTransaction(clock)
+  private val depositTransaction: (AccountId, Money) => Transaction = Transaction.deposit(clock)
+  private val bank = Bank()
+  private val deposit = Bank.deposit(bank)(Bank.findAccount)
+  private val createAccount = Bank.createAccount(bank)
 
   "Bank" should "return error for deposit if account doesn't exist" in {
-    val bank = Bank()
-    val deposit = Bank.deposit(bank)(Bank.findAccount)
+    deposit(depositTransaction("User1", 1000)) shouldBe Left(AccountNotExist)
+  }
 
-    deposit(transaction("User1", 1000)) shouldBe Left(AccountNotExist)
+  it should "deposit the money for a transaction" in {
+    val account = createAccount(NewAccount("John", "Doe"))
+
+    deposit(depositTransaction(account.id, 1000)) shouldBe Right(())
   }
 }

@@ -2,24 +2,20 @@ package com.thecookiezen
 
 import com.thecookiezen.Account.AccountId
 import com.thecookiezen.Bank.Money
+import com.thecookiezen.AccountStatement
 import java.time.LocalDate
 
 import scala.collection.mutable.Map
 
-case class Transaction(accountId: AccountId, date: LocalDate, amount: Money)
 case class Bank(accounts: Map[AccountId, Account])
 
-object Transaction {
-  val newTransaction: Clock => (AccountId, Money) => Transaction = clock =>
-    (id, amount) => Transaction(id, clock.now(), amount)
-}
-
 object Bank {
-  type Money = BigDecimal
+  type Money       = BigDecimal
   type FindAccount = Bank => AccountId => Option[Account]
   type Deposit =
     Bank => FindAccount => Transaction => Either[AccountError, Unit]
 
+  // should fail if account already exists
   val createAccount: Bank => NewAccount => Account = bank =>
     newAccount => {
       val account = Account.from(newAccount)
@@ -40,9 +36,8 @@ object Bank {
             .map(_ => ())
         }.toRight(AccountNotExist)
 
-  val withdraw: Bank => Transaction => Unit = _ => _ => ()
-  val accountStatement: Bank => AccountId => AccountStatement = _ =>
-    _ => AccountStatement()
+  val withdraw: Bank => Transaction => Unit                   = _ => _ => ()
+  val accountStatement: Bank => AccountId => Option[AccountStatement] = _ => _ => Some(AccountStatement())
 
   def apply(): Bank = new Bank(Map.empty)
 }

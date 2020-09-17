@@ -10,7 +10,6 @@ case class Account(
     transactionLog: List[Transaction]
 )
 case class NewAccount(firstName: String, secondName: String)
-case class AccountStatement()
 
 sealed abstract class AccountError
 case object AccountNotExist extends AccountError
