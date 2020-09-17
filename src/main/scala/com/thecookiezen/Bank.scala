@@ -17,7 +17,6 @@ object Bank {
 
   def apply(): Bank = new Bank(Map.empty)
 
-  // should fail if account already exists
   val createAccount: Bank => NewAccount => Account = bank =>
     newAccount => {
       val account = Account.from(newAccount)
