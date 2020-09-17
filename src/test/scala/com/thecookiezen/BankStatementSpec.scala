@@ -5,6 +5,7 @@ import java.util.UUID
 
 import com.thecookiezen.Bank.Money
 import com.thecookiezen.Account.AccountId
+import com.thecookiezen.Transaction.accountStatement
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -24,11 +25,13 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     |
     |""".stripMargin
 
-  private val clock: Clock = () => LocalDate.now()
+  private val clock: Clock                                          = () => LocalDate.parse("2020-08-01")
   private val depositTransaction: (AccountId, Money) => Transaction = Transaction.deposit(clock)
-  private val bank = Bank()
-  private val deposit = Bank.deposit(bank)(Bank.findAccount)
-  private val createAccount = Bank.createAccount(bank)
+  private val bank                                                  = Bank()
+  private val getAccount                                            = Bank.getAccount(bank)
+  private val deposit                                               = Bank.deposit(bank)(getAccount)
+  private val createAccount                                         = Bank.createAccount(bank)
+  private val getAccountStatement                                   = Bank.accountStatement(getAccount)(accountStatement)
 
   "Bank" should "return error for deposit if account doesn't exist" in {
     deposit(depositTransaction("User1", 1000)) shouldBe Left(AccountNotExist)
@@ -38,5 +41,26 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     val account = createAccount(NewAccount("John", "Doe"))
 
     deposit(depositTransaction(account.id, 1000)) shouldBe Right(())
+  }
+
+  it should "add new transaction to a account audit log for a deposit" in {
+    val account = createAccount(NewAccount("John", "Doe"))
+
+    deposit(depositTransaction(account.id, 123))
+    deposit(depositTransaction(account.id, 1000))
+
+    bank.accounts.get(account.id).map(_.transactionLog.size) shouldBe Some(2)
+  }
+
+  it should "give a list of transaction for a account statement for a specified account" in {
+    val account = createAccount(NewAccount("John", "Doe"))
+
+    deposit(depositTransaction(account.id, 123))
+    deposit(depositTransaction(account.id, 1000))
+
+    getAccountStatement(account.id).map(_.transactions).get should contain inOrder (
+      TransactionLog(Transaction(account.id, clock.now(), 123)),
+      TransactionLog(Transaction(account.id, clock.now(), 1000))
+    )
   }
 }

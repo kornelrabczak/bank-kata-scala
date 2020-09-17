@@ -5,10 +5,14 @@ import com.thecookiezen.Bank.Money
 import java.time.LocalDate
 
 case class Transaction(accountId: AccountId, date: LocalDate, amount: Money)
-case class AccountStatement(Transactions: List[TransactionLog])
-case class TransactionLog(Transaction: Transaction, balance: Money)
+case class AccountStatement(transactions: List[TransactionLog])
+case class TransactionLog(transaction: Transaction, balance: Money = 0)
 
 object Transaction {
-  val deposit: Clock => (AccountId, Money) => Transaction = clock =>
-    (id, amount) => Transaction(id, clock.now(), amount)
+  type CreateTransationLog = Account => AccountStatement
+
+  val deposit: Clock => (AccountId, Money) => Transaction = clock => (id, amount) => Transaction(id, clock.now(), amount)
+
+  val accountStatement: CreateTransationLog = account =>
+    AccountStatement(account.transactionLog.map(transaction => TransactionLog(transaction = transaction)))
 }

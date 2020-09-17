@@ -3,6 +3,7 @@ package com.thecookiezen
 import com.thecookiezen.Account.AccountId
 import com.thecookiezen.Bank.Money
 import com.thecookiezen.AccountStatement
+import com.thecookiezen.Transaction.CreateTransationLog
 import java.time.LocalDate
 
 import scala.collection.mutable.Map
@@ -12,10 +13,12 @@ case class Bank(accounts: Map[AccountId, Account])
 object Bank {
   type Money       = BigDecimal
   type FindAccount = Bank => AccountId => Option[Account]
-  type Deposit =
-    Bank => FindAccount => Transaction => Either[AccountError, Unit]
+  type GetAccount  = AccountId => Option[Account]
+  type Deposit     = Bank => GetAccount => Transaction => Either[AccountError, Unit]
 
   def apply(): Bank = new Bank(Map.empty)
+
+  val getAccount: Bank => GetAccount = bank => accId => bank.accounts.get(accId)
 
   val createAccount: Bank => NewAccount => Account = bank =>
     newAccount => {
@@ -24,19 +27,24 @@ object Bank {
       account
     }
 
-  val findAccount: FindAccount = bank => id => bank.accounts.get(id)
-
   val deposit: Deposit = bank =>
-    findAccount =>
-      transaction =>
-        {
-          findAccount(bank)(transaction.accountId)
-            .map { acc =>
-              acc.copy(transactionLog = acc.transactionLog :+ transaction)
-            }
-            .map(_ => ())
-        }.toRight(AccountNotExist)
+    getAccount =>
+      transaction => {
+        getAccount(transaction.accountId)
+          .map { acc =>
+            val updatedAccount = acc.copy(transactionLog = acc.transactionLog :+ transaction)
+            bank.accounts.put(acc.id, updatedAccount)
+          }
+          .map(_ => ())
+          .toRight(AccountNotExist)
+      }
 
-  val withdraw: Bank => Transaction => Unit                           = _ => _ => ()
-  val accountStatement: Bank => AccountId => Option[AccountStatement] = _ => _ => None
+  val withdraw: Bank => Transaction => Unit = _ => _ => ()
+
+  val accountStatement: GetAccount => CreateTransationLog => AccountId => Option[AccountStatement] = getAccount =>
+    getStatement =>
+      accountId => {
+        getAccount(accountId)
+          .map(getStatement)
+      }
 }
