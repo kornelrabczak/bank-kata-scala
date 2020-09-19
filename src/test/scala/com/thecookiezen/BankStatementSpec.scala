@@ -3,8 +3,9 @@ package com.thecookiezen
 import java.time.LocalDate
 import java.util.UUID
 
-import com.thecookiezen.Bank.Money
+import com.thecookiezen.Bank.{CheckAccountBalance, Money}
 import com.thecookiezen.Account.AccountId
+import com.thecookiezen.InsufficientBalance
 import com.thecookiezen.Transaction.accountStatement
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -25,13 +26,17 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     |
     |""".stripMargin
 
-  private val clock: Clock                                          = () => LocalDate.parse("2020-08-01")
-  private val depositTransaction: (AccountId, Money) => Transaction = Transaction.deposit(clock)
-  private val bank                                                  = Bank()
-  private val getAccount                                            = Bank.getAccount(bank)
-  private val deposit                                               = Bank.deposit(bank)(getAccount)
-  private val createAccount                                         = Bank.createAccount(bank)
-  private val getAccountStatement                                   = Bank.accountStatement(getAccount)(accountStatement)
+  private val checkIfAccountHasEnoughBalance                      = Account.accountService
+  private val clock: Clock                                        = () => LocalDate.parse("2020-08-01")
+  private val depositTransaction: (AccountId, Money) => Deposit   = Transaction.deposit(clock)
+  private val withdrawTransaction: (AccountId, Money) => Withdraw = Transaction.withdraw(clock)
+  private val bank                                                = Bank()
+  private val getAccount                                          = Bank.getAccount(bank)
+  private val addTransactionToAccount                             = Bank.addTransactionToAccount(bank)
+  private val deposit                                             = Bank.deposit(bank)(getAccount)(addTransactionToAccount)
+  private val withdraw                                            = Bank.withdraw(bank)(getAccount)(checkIfAccountHasEnoughBalance)(addTransactionToAccount)
+  private val createAccount                                       = Bank.createAccount(bank)
+  private val getAccountStatement                                 = Bank.accountStatement(getAccount)(accountStatement)
 
   "Bank" should "return error for deposit if account doesn't exist" in {
     deposit(depositTransaction("User1", 1000)) shouldBe Left(AccountNotExist)
@@ -52,6 +57,29 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     bank.accounts.get(account.id).map(_.transactionLog.size) shouldBe Some(2)
   }
 
+  it should "cannot withdraw from newly created account" in {
+    val account = createAccount(NewAccount("John", "Doe"))
+
+    withdraw(withdrawTransaction(account.id, 1000)) shouldBe Left(InsufficientBalance)
+  }
+
+  it should "cannot withdraw if there is not enough money on the account" in {
+    val account = createAccount(NewAccount("John", "Doe"))
+
+    deposit(depositTransaction(account.id, 123))
+    withdraw(withdrawTransaction(account.id, 1000)) shouldBe Left(InsufficientBalance)
+  }
+
+  it should "withdraw the money from account" in {
+    val account = createAccount(NewAccount("John", "Doe"))
+
+    deposit(depositTransaction(account.id, 1000))
+    withdraw(withdrawTransaction(account.id, 123))
+
+    bank.accounts.get(account.id).map(_.transactionLog.size) shouldBe Some(2)
+    // check the balance
+  }
+
   it should "give a list of transaction for a account statement for a specified account" in {
     val account = createAccount(NewAccount("John", "Doe"))
 
@@ -59,8 +87,8 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     deposit(depositTransaction(account.id, 1000))
 
     getAccountStatement(account.id).map(_.transactions).get should contain inOrder (
-      TransactionLog(Transaction(account.id, clock.now(), 123)),
-      TransactionLog(Transaction(account.id, clock.now(), 1000))
+      TransactionLog(Deposit(account.id, clock.now(), 123)),
+      TransactionLog(Deposit(account.id, clock.now(), 1000))
     )
   }
 }

@@ -1,6 +1,6 @@
 package com.thecookiezen
 
-import com.thecookiezen.Account.AccountId
+import com.thecookiezen.Account.{AccountId, CheckIfAccountHasEnoughBalance}
 import com.thecookiezen.Bank.Money
 import com.thecookiezen.AccountStatement
 import com.thecookiezen.Transaction.CreateTransationLog
@@ -11,14 +11,24 @@ import scala.collection.mutable.Map
 case class Bank(accounts: Map[AccountId, Account])
 
 object Bank {
-  type Money       = BigDecimal
-  type FindAccount = Bank => AccountId => Option[Account]
-  type GetAccount  = AccountId => Option[Account]
-  type Deposit     = Bank => GetAccount => Transaction => Either[AccountError, Unit]
+  type Money                   = BigDecimal
+  type GetAccount              = AccountId => Option[Account]
+  type DepositOperation        = Bank => GetAccount => AddTransactionToAccount => Transaction => Either[AccountError, Unit]
+  type CheckAccountBalance     = Account => Withdraw => Either[AccountError, Account]
+  type WithdrawOperation       =
+    Bank => GetAccount => CheckAccountBalance => AddTransactionToAccount => Withdraw => Either[AccountError, Unit]
+  type AddTransactionToAccount = (Account, Transaction) => Unit
 
   def apply(): Bank = new Bank(Map.empty)
 
   val getAccount: Bank => GetAccount = bank => accId => bank.accounts.get(accId)
+
+  val addTransactionToAccount: Bank => AddTransactionToAccount = bank =>
+    (acc, transaction) => {
+      val updatedAccount = acc.copy(transactionLog = acc.transactionLog :+ transaction)
+      bank.accounts.put(acc.id, updatedAccount)
+      ()
+    }
 
   val createAccount: Bank => NewAccount => Account = bank =>
     newAccount => {
@@ -27,19 +37,25 @@ object Bank {
       account
     }
 
-  val deposit: Deposit = bank =>
+  val deposit: DepositOperation = bank =>
     getAccount =>
-      transaction => {
-        getAccount(transaction.accountId)
-          .map { acc =>
-            val updatedAccount = acc.copy(transactionLog = acc.transactionLog :+ transaction)
-            bank.accounts.put(acc.id, updatedAccount)
-          }
-          .map(_ => ())
-          .toRight(AccountNotExist)
-      }
+      addTransaction =>
+        transaction => {
+          getAccount(transaction.accountId)
+            .map(acc => addTransaction(acc, transaction))
+            .toRight(AccountNotExist)
+        }
 
-  val withdraw: Bank => Transaction => Unit = _ => _ => ()
+  val withdraw: WithdrawOperation = bank =>
+    getAccount =>
+      checkBalance =>
+        addTransaction =>
+          transaction => {
+            getAccount(transaction.accountId)
+              .toRight(AccountNotExist)
+              .flatMap(acc => checkBalance(acc)(transaction))
+              .map(acc => addTransaction(acc, transaction))
+          }
 
   val accountStatement: GetAccount => CreateTransationLog => AccountId => Option[AccountStatement] = getAccount =>
     getStatement =>
