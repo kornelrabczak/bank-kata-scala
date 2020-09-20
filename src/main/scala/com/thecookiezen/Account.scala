@@ -32,13 +32,21 @@ object Account {
       transactionLog = List.empty
     )
 
-  val checkBalance: CheckBalance                 = calculateBalance => account => calculateBalance(account.transactionLog)
-  val calculateBalance: CalculateBalance         = _.foldLeft(BigDecimal(0))(_ + _.amount)
+  val checkBalance: CheckBalance = calculateBalance => account => calculateBalance(account.transactionLog)
+
+  val calculateBalance: CalculateBalance = _.foldLeft(BigDecimal(0)) { (acc, transaction) =>
+    transaction match {
+      case Deposit(_, _, amount)  => acc + amount
+      case Withdraw(_, _, amount) => acc - amount
+    }
+  }
+
   val checkIfEnoughBalance: CheckIfEnoughBalance = balance =>
-    transfer => Either.cond(balance + transfer > 0, (), InsufficientBalance)
+    transfer => Either.cond(balance - transfer > 0, (), InsufficientBalance)
 
   val checkIfAccountHasEnoughBalance: CheckIfAccountHasEnoughBalance = calculate =>
     balance => isEnough => account => withdraw => isEnough(balance(calculate)(account))(withdraw.amount).map(_ => account)
 
-  val accountService: Account => Withdraw => Either[AccountError, Account] = checkIfAccountHasEnoughBalance(calculateBalance)(checkBalance)(checkIfEnoughBalance)
+  val accountService: Account => Withdraw => Either[AccountError, Account] =
+    checkIfAccountHasEnoughBalance(calculateBalance)(checkBalance)(checkIfEnoughBalance)
 }

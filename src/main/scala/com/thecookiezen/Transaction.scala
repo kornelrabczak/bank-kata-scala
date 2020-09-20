@@ -18,7 +18,7 @@ case class TransactionLog(transaction: Transaction, balance: Money = 0)
 object Transaction {
   type CreateTransationLog = Account => AccountStatement
 
-  val withdraw: Clock => (AccountId, Money) => Withdraw = clock => (id, money) => Withdraw(id, clock.now(), -money)
+  val withdraw: Clock => (AccountId, Money) => Withdraw = clock => (id, money) => Withdraw(id, clock.now(), money)
   val deposit: Clock => (AccountId, Money) => Deposit   = clock => (id, money) => Deposit(id, clock.now(), money)
 
   val accountStatement: CreateTransationLog = account =>

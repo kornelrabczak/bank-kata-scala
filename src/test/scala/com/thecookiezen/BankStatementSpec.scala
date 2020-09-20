@@ -76,10 +76,13 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     deposit(depositTransaction(account.id, 1000))
     withdraw(withdrawTransaction(account.id, 123))
 
-    bank.accounts.get(account.id).map { acc =>
-      acc.transactionLog.size shouldBe 2
-      Account.checkBalance(Account.calculateBalance)(acc) shouldBe 877
-    }.fold(fail())(_ => ())
+    bank.accounts
+      .get(account.id)
+      .map { acc =>
+        acc.transactionLog.size shouldBe 2
+        Account.checkBalance(Account.calculateBalance)(acc) shouldBe 877
+      }
+      .fold(fail())(_ => ())
   }
 
   it should "give a list of transaction for a account statement for a specified account" in {

@@ -26,10 +26,10 @@ class AccountSpec extends AnyFlatSpec with Matchers {
   }
 
   it should "check if there is enough balance for the withdraw" in {
-    Account.checkIfEnoughBalance(100)(-23) shouldBe Right(())
+    Account.checkIfEnoughBalance(100)(23) shouldBe Right(())
   }
 
   it should "return error if there is not enough balance for the withdraw" in {
-    Account.checkIfEnoughBalance(23)(-100) shouldBe Left(InsufficientBalance)
+    Account.checkIfEnoughBalance(23)(100) shouldBe Left(InsufficientBalance)
   }
 }
