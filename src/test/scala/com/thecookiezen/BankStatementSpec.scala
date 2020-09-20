@@ -80,7 +80,7 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
       .get(account.id)
       .map { acc =>
         acc.transactionLog.size shouldBe 2
-        Account.checkBalance(Account.calculateBalance)(acc) shouldBe 877
+        Account.checkBalance(Transaction.accountStatement)(acc) shouldBe 877
       }
       .fold(fail())(_ => ())
   }
@@ -89,11 +89,13 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     val account = createAccount(NewAccount("John", "Doe"))
 
     deposit(depositTransaction(account.id, 123))
+    withdraw(withdrawTransaction(account.id, 23))
     deposit(depositTransaction(account.id, 1000))
 
     getAccountStatement(account.id).map(_.transactions).get should contain inOrder (
-      TransactionLog(Deposit(account.id, clock.now(), 123)),
-      TransactionLog(Deposit(account.id, clock.now(), 1000))
+      TransactionLog(Deposit(account.id, clock.now(), 123), 123),
+      TransactionLog(Withdraw(account.id, clock.now(), 23), 100),
+      TransactionLog(Deposit(account.id, clock.now(), 1000), 1100)
     )
   }
 }

@@ -12,15 +12,20 @@ sealed abstract class Transaction {
 case class Deposit(accountId: AccountId, date: LocalDate, amount: Money)  extends Transaction
 case class Withdraw(accountId: AccountId, date: LocalDate, amount: Money) extends Transaction
 
-case class AccountStatement(transactions: List[TransactionLog])
-case class TransactionLog(transaction: Transaction, balance: Money = 0)
+case class AccountStatement(transactions: List[TransactionLog], balance: Money)
+case class TransactionLog(transaction: Transaction, balance: Money)
 
 object Transaction {
-  type CreateTransationLog = Account => AccountStatement
+  type GetStatement = List[Transaction] => AccountStatement
 
   val withdraw: Clock => (AccountId, Money) => Withdraw = clock => (id, money) => Withdraw(id, clock.now(), money)
   val deposit: Clock => (AccountId, Money) => Deposit   = clock => (id, money) => Deposit(id, clock.now(), money)
 
-  val accountStatement: CreateTransationLog = account =>
-    AccountStatement(account.transactionLog.map(transaction => TransactionLog(transaction = transaction)))
+  val accountStatement: GetStatement = _.foldLeft(AccountStatement(List.empty, BigDecimal(0))) { (acc, transaction) =>
+    val currentBalance = transaction match {
+      case Deposit(_, _, amount)  => acc.balance + amount
+      case Withdraw(_, _, amount) => acc.balance - amount
+    }
+    acc.copy(transactions = acc.transactions :+ TransactionLog(transaction, currentBalance), currentBalance)
+  }
 }

@@ -3,7 +3,7 @@ package com.thecookiezen
 import com.thecookiezen.Account.{AccountId, CheckIfAccountHasEnoughBalance}
 import com.thecookiezen.Bank.Money
 import com.thecookiezen.AccountStatement
-import com.thecookiezen.Transaction.CreateTransationLog
+import com.thecookiezen.Transaction.GetStatement
 import java.time.LocalDate
 
 import scala.collection.mutable.Map
@@ -57,10 +57,10 @@ object Bank {
               .map(acc => addTransaction(acc, transaction))
           }
 
-  val accountStatement: GetAccount => CreateTransationLog => AccountId => Option[AccountStatement] = getAccount =>
+  val accountStatement: GetAccount => GetStatement => AccountId => Option[AccountStatement] = getAccount =>
     getStatement =>
       accountId => {
         getAccount(accountId)
-          .map(getStatement)
+          .map(acc => getStatement(acc.transactionLog))
       }
 }

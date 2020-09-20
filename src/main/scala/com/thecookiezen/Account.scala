@@ -1,6 +1,7 @@
 package com.thecookiezen
 
 import com.thecookiezen.Account.AccountId
+import com.thecookiezen.Transaction.GetStatement
 import com.thecookiezen.Bank.{GetAccount, Money}
 import java.util.UUID
 
@@ -18,11 +19,10 @@ case object InsufficientBalance extends AccountError
 
 object Account {
   type AccountId                      = String
-  type CalculateBalance               = List[Transaction] => Money
-  type CheckBalance                   = CalculateBalance => Account => Money
+  type CheckBalance                   = GetStatement => Account => Money
   type CheckIfEnoughBalance           = Money => Money => Either[AccountError, Unit]
   type CheckIfAccountHasEnoughBalance =
-    CalculateBalance => CheckBalance => CheckIfEnoughBalance => Account => Withdraw => Either[AccountError, Account]
+    GetStatement => CheckBalance => CheckIfEnoughBalance => Account => Withdraw => Either[AccountError, Account]
 
   val from: NewAccount => Account = newAccount =>
     Account(
@@ -32,14 +32,7 @@ object Account {
       transactionLog = List.empty
     )
 
-  val checkBalance: CheckBalance = calculateBalance => account => calculateBalance(account.transactionLog)
-
-  val calculateBalance: CalculateBalance = _.foldLeft(BigDecimal(0)) { (acc, transaction) =>
-    transaction match {
-      case Deposit(_, _, amount)  => acc + amount
-      case Withdraw(_, _, amount) => acc - amount
-    }
-  }
+  val checkBalance: CheckBalance = calculateBalance => account => calculateBalance(account.transactionLog).balance
 
   val checkIfEnoughBalance: CheckIfEnoughBalance = balance =>
     transfer => Either.cond(balance - transfer > 0, (), InsufficientBalance)
@@ -48,5 +41,5 @@ object Account {
     balance => isEnough => account => withdraw => isEnough(balance(calculate)(account))(withdraw.amount).map(_ => account)
 
   val accountService: Account => Withdraw => Either[AccountError, Account] =
-    checkIfAccountHasEnoughBalance(calculateBalance)(checkBalance)(checkIfEnoughBalance)
+    checkIfAccountHasEnoughBalance(Transaction.accountStatement)(checkBalance)(checkIfEnoughBalance)
 }

@@ -16,13 +16,13 @@ class AccountSpec extends AnyFlatSpec with Matchers {
   private val withdrawTransaction: (AccountId, Money) => Withdraw = Transaction.withdraw(clock)
 
   "Account" should "calculate right balance from a transactions" in {
-    Account.calculateBalance(
+    Transaction.accountStatement(
       List(
         depositTransaction("someId", 123),
         withdrawTransaction("someId", 100),
         depositTransaction("someId", 7)
       )
-    ) shouldBe 30
+    ).balance shouldBe 30
   }
 
   it should "check if there is enough balance for the withdraw" in {
