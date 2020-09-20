@@ -57,13 +57,13 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     bank.accounts.get(account.id).map(_.transactionLog.size) shouldBe Some(2)
   }
 
-  it should "cannot withdraw from newly created account" in {
+  it should "not withdraw from newly created account" in {
     val account = createAccount(NewAccount("John", "Doe"))
 
     withdraw(withdrawTransaction(account.id, 1000)) shouldBe Left(InsufficientBalance)
   }
 
-  it should "cannot withdraw if there is not enough money on the account" in {
+  it should "not withdraw if there is not enough money on the account" in {
     val account = createAccount(NewAccount("John", "Doe"))
 
     deposit(depositTransaction(account.id, 123))
@@ -76,8 +76,10 @@ class BankStatementSpec extends AnyFlatSpec with Matchers {
     deposit(depositTransaction(account.id, 1000))
     withdraw(withdrawTransaction(account.id, 123))
 
-    bank.accounts.get(account.id).map(_.transactionLog.size) shouldBe Some(2)
-    // check the balance
+    bank.accounts.get(account.id).map { acc =>
+      acc.transactionLog.size shouldBe 2
+      Account.checkBalance(Account.calculateBalance)(acc) shouldBe 877
+    }.fold(fail())(_ => ())
   }
 
   it should "give a list of transaction for a account statement for a specified account" in {
